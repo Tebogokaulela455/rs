@@ -10,13 +10,16 @@ const getCorsHeaders = () => ({
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 });
-// remember this code
-    console.log(`Incoming Request: ${req.method} ${req.url}`); // <-- ADD THIS
+
     
     // ... rest of your code
 
 const server = http.createServer((req, res) => {
     const corsHeaders = getCorsHeaders();
+
+    // remember this code
+    console.log(`Incoming Request: ${req.method} ${req.url}`); // <-- ADD THIS
+
 
     // 1. Handle Pre-flight OPTIONS request explicitly
     if (req.method === 'OPTIONS') {
