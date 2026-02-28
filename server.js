@@ -10,6 +10,8 @@ const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    const PORT = process.env.PORT || 3000;
+
     if (req.method === 'OPTIONS') { 
         res.writeHead(204); 
         res.end(); 
