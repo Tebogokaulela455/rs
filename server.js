@@ -2,22 +2,29 @@ const http = require('http');
 const https = require('https');
 
 const API_TOKEN = "E-PJWQoVlUg5Qudh1kSU6sfDgXtsozYzelR4xEbyK28";
-
-// RENDER FIX: Use process.env.PORT or default to 3000
 const PORT = process.env.PORT || 3000;
 
 const server = http.createServer((req, res) => {
-    // CORS Headers
+    // Standard CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
+    // Handle pre-flight OPTIONS request
     if (req.method === 'OPTIONS') {
         res.writeHead(204);
         res.end();
         return;
     }
 
+    // FIX: Root Route to prevent 404 on deployment/health checks
+    if (req.method === 'GET' && req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Rea Sender Backend is LIVE');
+        return;
+    }
+
+    // Route to handle order creation
     if (req.method === 'POST' && req.url === '/api/order') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -54,13 +61,14 @@ const server = http.createServer((req, res) => {
             apiReq.write(body);
             apiReq.end();
         });
-    } else {
-        res.writeHead(404);
-        res.end(JSON.stringify({ message: "Route not found" }));
+    } 
+    // Otherwise, return 404
+    else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: "Route not found", path: req.url }));
     }
 });
 
-// Start server on the dynamic port Render provides
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is live on port ${PORT}`);
 });
