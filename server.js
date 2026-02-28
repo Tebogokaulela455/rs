@@ -12,6 +12,11 @@ const getCorsHeaders = () => ({
 });
 
 const server = http.createServer((req, res) => {
+    console.log(`Incoming Request: ${req.method} ${req.url}`); // <-- ADD THIS
+    
+    // ... rest of your code
+
+const server = http.createServer((req, res) => {
     const corsHeaders = getCorsHeaders();
 
     // 1. Handle Pre-flight OPTIONS request explicitly
