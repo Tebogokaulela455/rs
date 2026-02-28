@@ -10,8 +10,7 @@ const getCorsHeaders = () => ({
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 });
-
-const server = http.createServer((req, res) => {
+// remember this code
     console.log(`Incoming Request: ${req.method} ${req.url}`); // <-- ADD THIS
     
     // ... rest of your code
