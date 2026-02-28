@@ -1,28 +1,28 @@
 const http = require('http');
 const https = require('https');
 
-// Official Reseller Token 
 const API_TOKEN = "E-PJWQoVlUg5Qudh1kSU6sfDgXtsozYzelR4xEbyK28";
 
+// RENDER FIX: Use process.env.PORT or default to 3000
+const PORT = process.env.PORT || 3000;
+
 const server = http.createServer((req, res) => {
-    // CORS Headers to allow your HTML frontend to connect 
+    // CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    const PORT = process.env.PORT || 3000;
-
-    if (req.method === 'OPTIONS') { 
-        res.writeHead(204); 
-        res.end(); 
-        return; 
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
     }
 
     if (req.method === 'POST' && req.url === '/api/order') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', () => {
-            console.log("Incoming order data:", body); // DEBUG: Check what your HTML is sending
+            console.log("Processing Order for Rea Sender...");
 
             const options = {
                 hostname: 'reseller.openweb.co.za',
@@ -38,15 +38,8 @@ const server = http.createServer((req, res) => {
             const apiReq = https.request(options, (apiRes) => {
                 let apiData = '';
                 apiRes.on('data', d => { apiData += d; });
-                
                 apiRes.on('end', () => {
-                    // This logs the ACTUAL error from OpenWeb to your terminal
-                    if (apiRes.statusCode !== 200) {
-                        console.error(`DASHBOARD ERROR (${apiRes.statusCode}):`, apiData);
-                    } else {
-                        console.log("Order Successful:", apiData);
-                    }
-                    
+                    console.log(`OpenWeb Response (${apiRes.statusCode}):`, apiData);
                     res.writeHead(apiRes.statusCode, { 'Content-Type': 'application/json' });
                     res.end(apiData);
                 });
@@ -55,16 +48,19 @@ const server = http.createServer((req, res) => {
             apiReq.on('error', (e) => {
                 console.error("Connection Error:", e.message);
                 res.writeHead(500);
-                res.end(JSON.stringify({ error: "Could not connect to OpenWeb" }));
+                res.end(JSON.stringify({ error: "Upstream connection failed" }));
             });
 
             apiReq.write(body);
             apiReq.end();
         });
+    } else {
+        res.writeHead(404);
+        res.end(JSON.stringify({ message: "Route not found" }));
     }
 });
 
-server.listen(3000, () => {
-    console.log('Rea Sender Bridge ACTIVE on http://localhost:3000');
-    console.log('Press Ctrl+C to stop the server.');
+// Start server on the dynamic port Render provides
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is live on port ${PORT}`);
 });
