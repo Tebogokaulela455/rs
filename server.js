@@ -4,32 +4,56 @@ const https = require('https');
 const API_TOKEN = "E-PJWQoVlUg5Qudh1kSU6sfDgXtsozYzelR4xEbyK28";
 const PORT = process.env.PORT || 3000;
 
-const server = http.createServer((req, res) => {
-    // Standard CORS Headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+// Centralized CORS Headers to ensure they are never missed
+const getCorsHeaders = () => ({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+});
 
-    // Handle pre-flight OPTIONS request
+const server = http.createServer((req, res) => {
+    const corsHeaders = getCorsHeaders();
+
+    // 1. Handle Pre-flight OPTIONS request explicitly
     if (req.method === 'OPTIONS') {
-        res.writeHead(204);
+        res.writeHead(204, corsHeaders);
         res.end();
         return;
     }
 
-    // FIX: Root Route to prevent 404 on deployment/health checks
+    // 2. Attach CORS headers to all other incoming requests
+    Object.keys(corsHeaders).forEach(key => res.setHeader(key, corsHeaders[key]));
+
+    // 3. Root Route (Health Check for Render)
     if (req.method === 'GET' && req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Rea Sender Backend is LIVE');
         return;
     }
 
-    // Route to handle order creation
+    // 4. Order API Route
     if (req.method === 'POST' && req.url === '/api/order') {
         let body = '';
+        
+        req.on('error', (err) => {
+            console.error('Request Data Error:', err);
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid request data' }));
+        });
+
         req.on('data', chunk => { body += chunk.toString(); });
+        
         req.on('end', () => {
             console.log("Processing Order for Rea Sender...");
+            
+            // Prevent server crash if frontend sends malformed JSON
+            try {
+                if (body) JSON.parse(body);
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON body sent from client.' }));
+                return;
+            }
 
             const options = {
                 hostname: 'reseller.openweb.co.za',
@@ -38,7 +62,9 @@ const server = http.createServer((req, res) => {
                 headers: {
                     'Authorization': `Bearer ${API_TOKEN}`,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    // Adding Content-Length prevents upstream socket hangs
+                    'Content-Length': Buffer.byteLength(body) 
                 }
             };
 
@@ -53,8 +79,8 @@ const server = http.createServer((req, res) => {
             });
 
             apiReq.on('error', (e) => {
-                console.error("Connection Error:", e.message);
-                res.writeHead(500);
+                console.error("Upstream Connection Error:", e.message);
+                res.writeHead(502, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: "Upstream connection failed" }));
             });
 
@@ -62,7 +88,7 @@ const server = http.createServer((req, res) => {
             apiReq.end();
         });
     } 
-    // Otherwise, return 404
+    // 5. Catch-all for 404
     else {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: "Route not found", path: req.url }));
@@ -70,5 +96,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is live on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
